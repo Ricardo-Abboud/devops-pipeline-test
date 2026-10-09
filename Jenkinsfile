@@ -49,5 +49,11 @@ pipeline {
                                  fingerprint: true
             }
         }
+	stage('Deploy to Staging') {
+ 	   steps {
+        	echo 'Deploying application to staging...'
+        	sh 'sh scripts/deploy-staging.sh'
+    		}
+	}
     }
 }
