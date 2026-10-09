@@ -4,6 +4,7 @@ pipeline {
 
     options {
         skipDefaultCheckout(true)
+	disableConcurrentBuilds()
     }
 
     stages {
@@ -40,20 +41,42 @@ pipeline {
                 echo 'Packaging application...'
 
                 sh '''
-                    mkdir -p dist
-                    tar -czf dist/myapp.tar.gz \
-                        src package.json package-lock.json
-                '''
+			mkdir -p dist
+
+			git rev-parse HEAD > release.txt
+
+			tar -czf dist/myapp.tar.gz \
+				src package.json package-lock.json release.txt
+		'''
 
                 archiveArtifacts artifacts: 'dist/*.tar.gz',
                                  fingerprint: true
             }
         }
 	stage('Deploy to Staging') {
- 	   steps {
-        	echo 'Deploying application to staging...'
-        	sh 'sh scripts/deploy-staging.sh'
-    		}
+	   steps {
+		echo 'Deploying application to staging...'
+		sh 'sh scripts/deploy-staging.sh'
+		}
+	}
+	stage('Production Approval') {
+		options {
+		        timeout(time: 30, unit: 'MINUTES')
+		}
+
+		steps {
+		     input message: 'Staging passed. Deploy to production?',
+			   ok: 'Approve Deployment',
+			   submitter: 'admin'
+	    }
+	}
+
+	stage('Deploy to Production') {
+	    steps {
+	        echo 'Deploying application to production...'
+	        sh 'sh scripts/deploy-production.sh'
+	    }
 	}
     }
+
 }
